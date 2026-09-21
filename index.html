@@ -1,0 +1,990 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>frutimovies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cinematic: {
+                            950: '#000000',
+                            900: '#0a0a0a',
+                            800: '#141414',
+                            700: '#262626',
+                            600: '#404040',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+        .glow-mono {
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
+        }
+        .text-glow {
+            text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #262626;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #404040;
+        }
+        @keyframes centerSpin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.15); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        @keyframes centerPulseClick {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.3) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+        .settings-spin-hover:hover {
+            animation: centerSpin 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .settings-click-anim {
+            animation: centerPulseClick 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body x-data="movieApp()" x-init="init()" class="bg-black text-gray-100 min-h-screen selection:bg-white selection:text-black flex">
+
+    <!-- Left Sidebar Navigation -->
+    <aside class="w-64 border-r border-neutral-800 bg-black/90 backdrop-blur-xl h-screen sticky top-0 flex flex-col justify-between p-6 z-40 hidden md:flex">
+        <div>
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3 cursor-pointer mb-10" @click="resetHome()">
+                <img src="https://github.com/school-rgb/frutiger-logo/blob/main/Screenshot%202026-09-20%2010.14.00%20PM-inverted.png?raw=true" alt="CineVerse Logo" class="w-10 h-10 object-contain">
+                <div>
+                    <span class="text-xl font-black tracking-wider text-white">Frutimovies an TVshows</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-2">
+                <button @click="mediaType = 'movie'; activeTab = 'home'; resetHome()" 
+                        :class="activeTab === 'home' && mediaType === 'movie' ? 'text-white bg-white/10 border-white/30' : 'text-neutral-400 hover:text-white border-transparent'" 
+                        class="w-full px-4 py-3 rounded-2xl text-sm font-medium border transition-all flex items-center space-x-3 text-left">
+                    <i data-lucide="film" class="w-5 h-5"></i>
+                    <span>Movies</span>
+                </button>
+
+                <button @click="mediaType = 'tv'; activeTab = 'home'; resetHome()" 
+                        :class="activeTab === 'home' && mediaType === 'tv' ? 'text-white bg-white/10 border-white/30' : 'text-neutral-400 hover:text-white border-transparent'" 
+                        class="w-full px-4 py-3 rounded-2xl text-sm font-medium border transition-all flex items-center space-x-3 text-left">
+                    <i data-lucide="tv" class="w-5 h-5"></i>
+                    <span>TV Shows</span>
+                </button>
+
+                <button @click="activeTab = 'watchlist'" 
+                        :class="activeTab === 'watchlist' ? 'text-white bg-white/10 border-white/30' : 'text-neutral-400 hover:text-white border-transparent'" 
+                        class="w-full px-4 py-3 rounded-2xl text-sm font-medium border transition-all flex items-center justify-between text-left relative">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="bookmark" class="w-5 h-5"></i>
+                        <span>Watchlist</span>
+                    </div>
+                    <span x-show="watchlist.length > 0" class="w-5 h-5 bg-white text-black rounded-full text-xs font-bold flex items-center justify-center animate-pulse" x-text="watchlist.length"></span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- User Profile Avatar Footer with interactive spinning settings gear -->
+        <div class="pt-6 border-t border-neutral-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm uppercase" x-text="userInitial">
+                    U
+                </div>
+                <div>
+                    <span class="block text-xs font-semibold text-gray-200" x-text="userName">user</span>
+                    <span class="block text-[10px] text-neutral-500 uppercase" x-text="activeStreamer"></span>
+                </div>
+            </div>
+            
+            <!-- Settings Icon -->
+            <div @click="openSettings()" class="p-2 cursor-pointer rounded-xl hover:bg-neutral-900 transition-colors flex items-center justify-center">
+                <i data-lucide="settings" class="w-5 h-5 text-neutral-400 hover:text-white settings-spin-hover transition-transform origin-center" :class="isSettingsAnimating ? 'settings-click-anim' : ''"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main App Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Top Mobile Header -->
+        <header class="sticky top-0 z-30 backdrop-blur-xl bg-black/80 border-b border-neutral-800 transition-all duration-300 md:hidden">
+            <div class="px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-2 cursor-pointer" @click="resetHome()">
+                    <img src="https://github.com/school-rgb/frutiger-logo/blob/main/Screenshot%202026-09-20%2010.14.00%20PM-inverted.png?raw=true" alt="CineVerse Logo" class="w-8 h-8 object-contain">
+                    <span class="text-lg font-black tracking-wider text-white">Frutimovies an TVshows</span>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button @click="mediaType = 'movie'; activeTab = 'home'; resetHome()" class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white"><i data-lucide="film" class="w-4 h-4"></i></button>
+                    <button @click="mediaType = 'tv'; activeTab = 'home'; resetHome()" class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white"><i data-lucide="tv" class="w-4 h-4"></i></button>
+                    <button @click="activeTab = 'watchlist'" class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white relative">
+                        <i data-lucide="bookmark" class="w-4 h-4"></i>
+                        <span x-show="watchlist.length > 0" class="absolute -top-1 -right-1 w-4 h-4 bg-white text-black rounded-full text-[10px] font-bold flex items-center justify-center" x-text="watchlist.length"></span>
+                    </button>
+                    <button @click="openSettings()" class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white">
+                        <i data-lucide="settings" class="w-4 h-4 settings-spin-hover origin-center" :class="isSettingsAnimating ? 'settings-click-anim' : ''"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow relative">
+
+            <!-- Search Bar & Clean Search Dropdown -->
+            <div class="mb-8 relative" @click.away="showSearchMenu = false" x-show="activeTab !== 'settings'">
+                <form @submit.prevent="executeFullSearch()" class="relative w-full max-w-2xl">
+                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-neutral-400">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </span>
+                    <input type="text" 
+                           x-model="searchQuery" 
+                           @focus="if(searchQuery.trim().length > 0) showSearchMenu = true"
+                           @input.debounce.250ms="handlePredictionInput()"
+                           placeholder="Search professional studio films & TV shows..." 
+                           class="w-full pl-11 pr-10 py-3.5 bg-neutral-900 border border-neutral-800 focus:border-white rounded-2xl text-sm text-gray-200 placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-white/25 transition-all shadow-xl">
+                    
+                    <template x-if="searchQuery">
+                        <button type="button" @click="clearSearch()" class="absolute inset-y-0 right-0 pr-4 flex items-center text-neutral-400 hover:text-white">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </template>
+                </form>
+
+                <!-- Search Dropdown Menu -->
+                <div x-show="showSearchMenu && predictedMatches.length > 0 && searchQuery.trim().length > 0" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                     class="absolute top-full mt-2 w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl overflow-hidden z-40 backdrop-blur-2xl p-2"
+                     style="display: none;">
+
+                    <div class="max-h-80 overflow-y-auto space-y-1.5 pr-1">
+                        <template x-for="item in predictedMatches" :key="item.id">
+                            <div @click="openDetailsModal(item); showSearchMenu = false;" 
+                                 class="flex items-center space-x-3.5 p-2 rounded-2xl hover:bg-neutral-900 cursor-pointer transition-all border border-transparent hover:border-neutral-800 group">
+                                
+                                <div class="relative w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-neutral-900 border border-neutral-800">
+                                    <img :src="getImageUrl(item.poster_path, 'w300')" :alt="item.title || item.name" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/300x450/141414/ffffff?text=Movie'">
+                                </div>
+
+                                <div class="flex-grow min-w-0">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="text-sm font-bold text-white group-hover:text-glow truncate" x-text="item.title || item.name"></h4>
+                                    </div>
+                                    <div class="flex items-center space-x-3 mt-1">
+                                        <span class="text-xs text-neutral-400 flex items-center gap-1">
+                                            <i data-lucide="calendar" class="w-3 h-3"></i> <span x-text="(item.release_date || item.first_air_date || '2026').substring(0,4)"></span>
+                                        </span>
+                                        <span class="text-xs text-amber-400 font-semibold flex items-center gap-0.5">
+                                            <i data-lucide="star" class="w-3 h-3 fill-amber-400"></i> <span x-text="item.vote_average ? item.vote_average.toFixed(1) : '7.0'"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS HOME UI TAB -->
+            <div x-show="activeTab === 'settings'" x-transition:enter.opacity.duration.300ms style="display: none;" class="space-y-8">
+                <div class="border-b border-neutral-800 pb-5">
+                    <h1 class="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                        <i data-lucide="settings" class="w-8 h-8 text-white"></i>
+                        Platform & Profile Settings
+                    </h1>
+                    <p class="text-sm text-neutral-400 mt-1">Customize your profile credentials and choose your active streaming provider hub.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+                    <!-- Profile Customization Card -->
+                    <div class="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center font-black text-2xl uppercase shadow-lg" x-text="userInitial">
+                                U
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">User Profile</h3>
+                                <p class="text-xs text-neutral-400">Initial updates automatically from name.</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Display Name</label>
+                                <input type="text" x-model="tempUserName" class="w-full px-4 py-3.5 bg-neutral-950 border border-neutral-800 focus:border-white rounded-2xl text-sm text-white outline-none transition-all">
+                            </div>
+                        </div>
+
+                        <button @click="saveSettings()" class="w-full py-3.5 bg-white text-black font-bold text-sm rounded-2xl hover:bg-neutral-200 transition-all shadow-lg">
+                            Save Profile Settings
+                        </button>
+                    </div>
+
+                    <!-- Streaming Provider Hub Card -->
+                    <div class="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-1">Streaming Provider Hub</h3>
+                            <p class="text-xs text-neutral-400">Instantly switch catalogues or view all combined studios.</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <template x-for="provider in ['All', 'Netflix', 'Prime Video', 'Disney+', 'HBO Max', 'Apple TV+', 'Paramount+']">
+                                <button @click="tempActiveStreamer = provider"
+                                        :class="tempActiveStreamer === provider ? 'bg-white text-black font-bold border-white' : 'bg-neutral-950 text-neutral-300 border-neutral-800 hover:border-neutral-600'"
+                                        class="px-4 py-3 rounded-2xl border text-xs font-semibold text-center transition-all shadow-md"
+                                        x-text="provider">
+                                </button>
+                            </template>
+                        </div>
+
+                        <button @click="saveSettings()" class="w-full py-3.5 bg-white text-black font-bold text-sm rounded-2xl hover:bg-neutral-200 transition-all shadow-lg">
+                            Apply Streaming Hub
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOME TAB -->
+            <div x-show="activeTab === 'home'" x-transition:enter.opacity.duration.300ms>
+                
+                <!-- Hero Featured Banner -->
+                <template x-if="featuredItem">
+                    <section class="relative rounded-3xl overflow-hidden mb-12 shadow-2xl border border-neutral-800 bg-neutral-900 group">
+                        <div class="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
+                        <div class="absolute inset-0 z-10 bg-gradient-to-r from-black via-black/80 to-transparent w-full md:w-3/4"></div>
+                        
+                        <div class="relative h-[480px] sm:h-[540px] md:h-[580px] w-full bg-black">
+                            <img :src="getImageUrl(featuredItem.backdrop_path, 'w1280')" :alt="featuredItem.title || featuredItem.name" class="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-1000" onerror="this.src='https://placehold.co/1280x720/141414/ffffff?text=CineVerse'">
+                        </div>
+
+                        <div class="absolute bottom-0 left-0 right-0 z-20 p-6 sm:p-10 md:p-12 max-w-3xl">
+                            <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-neutral-800 text-gray-300 border border-neutral-700 uppercase tracking-widest" x-text="activeStreamer"></span>
+                                <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/10 text-white border border-white/20 flex items-center gap-1 backdrop-blur-md">
+                                    <i data-lucide="star" class="w-3.5 h-3.5 fill-white text-white"></i> <span x-text="featuredItem.vote_average ? featuredItem.vote_average.toFixed(1) : '7.5'"></span>
+                                </span>
+                            </div>
+
+                            <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight mb-4 text-glow" x-text="featuredItem.title || featuredItem.name"></h1>
+                            
+                            <p class="text-sm sm:text-base text-gray-300 line-clamp-3 mb-6 max-w-2xl leading-relaxed" x-text="featuredItem.overview"></p>
+
+                            <div class="flex flex-wrap items-center gap-4">
+                                <!-- Watch Now button with play icon properly spaced -->
+                                <button @click="openDetailsModal(featuredItem)" class="px-7 py-3.5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-extrabold text-sm flex items-center space-x-3 glow-mono transition-all transform hover:-translate-y-0.5">
+                                    <i data-lucide="play" class="w-5 h-5 fill-black flex-shrink-0"></i>
+                                    <span>WATCH NOW</span>
+                                </button>
+                                
+                                <button @click="toggleWatchlist(featuredItem)" 
+                                        :class="isInWatchlist(featuredItem.id) ? 'bg-white/20 border-white text-white' : 'bg-neutral-800/80 border-neutral-700 text-gray-200 hover:bg-neutral-700'"
+                                        class="px-5 py-3.5 rounded-2xl border font-semibold text-sm flex items-center space-x-2 transition-all backdrop-blur-md">
+                                    <i data-lucide="bookmark" class="w-4 h-4" :class="isInWatchlist(featuredItem.id) ? 'fill-white text-white' : ''"></i>
+                                    <span x-text="isInWatchlist(featuredItem.id) ? 'In Watchlist' : 'Add to Watchlist'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </template>
+
+                <!-- Section Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                        <i data-lucide="film" class="w-6 h-6 text-white"></i>
+                        <span x-text="mediaType === 'movie' ? 'Studio Movies' : 'Official TV Shows'"></span>
+                    </h2>
+                    <span class="text-xs font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-xl uppercase" x-text="activeStreamer"></span>
+                </div>
+
+                <!-- Loading State -->
+                <template x-if="isLoading">
+                    <div class="flex justify-center items-center py-32">
+                        <div class="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
+                    </div>
+                </template>
+
+                <!-- Media Grid -->
+                <template x-if="!isLoading">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                        <template x-for="item in mediaList" :key="item.id">
+                            <div @click="openDetailsModal(item)" class="group relative rounded-2xl overflow-hidden border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer shadow-xl aspect-[2/3] bg-neutral-950">
+                                
+                                <img :src="getImageUrl(item.poster_path, 'w500')" :alt="item.title || item.name" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.src='https://placehold.co/500x750/141414/ffffff?text=No+Poster'">
+
+                                <div class="absolute top-2.5 right-2.5 z-20 overflow-hidden h-10 w-10 pointer-events-none">
+                                    <button @click.stop="toggleWatchlist(item)" 
+                                            class="pointer-events-auto p-2 rounded-xl bg-black/70 backdrop-blur-md border border-white/20 text-white hover:bg-black/95 transition-all shadow-lg flex items-center justify-center transform -translate-y-12 group-hover:translate-y-0 duration-300 ease-out w-full h-full">
+                                        <i data-lucide="bookmark" class="w-4 h-4" :class="isInWatchlist(item.id) ? 'fill-white text-white' : 'text-white'"></i>
+                                    </button>
+                                </div>
+
+                                <div class="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black via-black/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out flex flex-col justify-end p-4 z-10">
+                                    <h3 class="font-bold text-sm text-white line-clamp-2 mb-2 text-glow" x-text="item.title || item.name"></h3>
+                                    
+                                    <div class="flex items-center space-x-1.5">
+                                        <div class="flex items-center text-amber-400">
+                                            <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                                        </div>
+                                        <span class="text-xs font-bold text-white" x-text="item.vote_average ? item.vote_average.toFixed(1) : 'N/A'"></span>
+                                        <span class="text-[10px] text-neutral-400 ml-auto uppercase font-semibold px-1.5 py-0.5 bg-neutral-900/80 rounded border border-neutral-700" x-text="mediaType"></span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+            </div>
+
+            <!-- FULL SEARCH RESULTS TAB -->
+            <div x-show="activeTab === 'full-search'" x-transition:enter.opacity.duration.300ms style="display: none;">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                            <i data-lucide="search" class="w-7 h-7 text-white"></i>
+                            Full Search Results for "<span x-text="searchQuery"></span>"
+                        </h2>
+                        <p class="text-sm text-neutral-400 mt-1">Professional films and TV shows catalog.</p>
+                    </div>
+                    <button @click="resetHome()" class="px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs font-semibold hover:bg-neutral-800">
+                        Back to Home
+                    </button>
+                </div>
+
+                <template x-if="fullSearchResults.length > 0">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                        <template x-for="item in fullSearchResults" :key="item.id">
+                            <div @click="openDetailsModal(item)" class="group relative rounded-2xl overflow-hidden border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer shadow-xl aspect-[2/3] bg-neutral-950">
+                                
+                                <img :src="getImageUrl(item.poster_path, 'w500')" :alt="item.title || item.name" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.src='https://placehold.co/500x750/141414/ffffff?text=No+Poster'">
+
+                                <div class="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black via-black/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out flex flex-col justify-end p-4 z-10">
+                                    <h3 class="font-bold text-sm text-white line-clamp-2 mb-2 text-glow" x-text="item.title || item.name"></h3>
+                                    
+                                    <div class="flex items-center space-x-1.5">
+                                        <div class="flex items-center text-amber-400">
+                                            <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                                        </div>
+                                        <span class="text-xs font-bold text-white" x-text="item.vote_average ? item.vote_average.toFixed(1) : 'N/A'"></span>
+                                        <span class="text-[10px] text-neutral-400 ml-auto uppercase font-semibold px-1.5 py-0.5 bg-neutral-900/80 rounded border border-neutral-700" x-text="item.media_type"></span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <template x-if="fullSearchResults.length === 0">
+                    <div class="text-center py-28 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                            <i data-lucide="frown" class="w-10 h-10"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">No Results Found</h3>
+                        <p class="text-sm text-neutral-400 max-w-md mx-auto mb-6">We couldn't find any official films matching your search.</p>
+                        <button @click="resetHome()" class="px-6 py-3 rounded-2xl bg-white text-black font-bold text-sm shadow-lg hover:bg-neutral-200 transition-all">
+                            Return Home
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- WATCHLIST TAB -->
+            <div x-show="activeTab === 'watchlist'" x-transition:enter.opacity.duration.300ms style="display: none;">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                        <i data-lucide="bookmark" class="w-7 h-7 text-white fill-white/20"></i>
+                        My frutimovies Watchlist
+                    </h2>
+                    <p class="text-sm text-neutral-400 mt-1">Your saved studio films and TV shows.</p>
+                </div>
+
+                <template x-if="watchlist.length > 0">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                        <template x-for="item in watchlist" :key="item.id">
+                            <div @click="openDetailsModal(item)" class="group relative rounded-2xl overflow-hidden border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer shadow-xl aspect-[2/3] bg-neutral-950">
+                                
+                                <img :src="getImageUrl(item.poster_path, 'w500')" :alt="item.title || item.name" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.src='https://placehold.co/500x750/141414/ffffff?text=No+Poster'">
+                                
+                                <div class="absolute top-2.5 right-2.5 z-20 overflow-hidden h-10 w-10 pointer-events-none">
+                                    <button @click.stop="toggleWatchlist(item)" 
+                                            class="pointer-events-auto p-2 rounded-xl bg-white text-black hover:bg-neutral-200 transition-all shadow-lg flex items-center justify-center transform -translate-y-12 group-hover:translate-y-0 duration-300 ease-out w-full h-full"
+                                            title="Remove from Watchlist">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+
+                                <div class="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black via-black/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out flex flex-col justify-end p-4 z-10">
+                                    <h3 class="font-bold text-sm text-white line-clamp-2 mb-2 text-glow" x-text="item.title || item.name"></h3>
+                                    
+                                    <div class="flex items-center space-x-1.5">
+                                        <div class="flex items-center text-amber-400">
+                                            <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                                        </div>
+                                        <span class="text-xs font-bold text-white" x-text="item.vote_average ? item.vote_average.toFixed(1) : 'N/A'"></span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <template x-if="watchlist.length === 0">
+                    <div class="text-center py-28 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                            <i data-lucide="bookmark-plus" class="w-10 h-10"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Your Watchlist is Empty</h3>
+                        <p class="text-sm text-neutral-400 max-w-md mx-auto mb-6">Add official films to watch them anytime.</p>
+                        <button @click="resetHome()" class="px-6 py-3 rounded-2xl bg-white text-black font-bold text-sm shadow-lg hover:bg-neutral-200 transition-all">
+                            Explore Movies
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Details Modal -->
+    <div x-show="showModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-hidden bg-black flex flex-col"
+         style="display: none;">
+        
+        <template x-if="currentMedia">
+            <div class="relative h-screen w-full flex flex-col justify-between overflow-hidden">
+                
+                <div class="absolute inset-0 z-0 bg-black">
+                    <img :src="getImageUrl(currentMedia.backdrop_path, 'w1280')" :alt="currentMedia.title || currentMedia.name" class="w-full h-full object-cover object-center filter brightness-75 scale-105" onerror="this.src='https://placehold.co/1280x720/141414/ffffff?text=CineVerse'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent w-full md:w-3/4"></div>
+                </div>
+
+                <!-- Top bar inside details menu -->
+                <div class="relative z-20 flex items-center justify-between p-6 sm:p-8 flex-shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <span class="px-3.5 py-1 rounded-full text-xs font-bold bg-white/20 border border-white/40 text-white uppercase tracking-widest backdrop-blur-md" x-text="currentMedia.media_type === 'tv' ? 'TV Series' : 'Movie'"></span>
+                        <span class="px-3 py-1 rounded-lg text-xs font-semibold bg-neutral-800 text-gray-300 border border-neutral-700 uppercase" x-text="activeStreamer"></span>
+                        <div class="flex items-center space-x-1 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 text-white font-bold text-xs">
+                            <i data-lucide="star" class="w-3.5 h-3.5 fill-white text-white"></i>
+                            <span x-text="currentMedia.vote_average ? currentMedia.vote_average.toFixed(1) : '7.0'"></span>
+                        </div>
+                        <div class="flex items-center space-x-1 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 text-white font-medium text-xs">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-white"></i>
+                            <span x-text="formatRuntime(currentMedia.runtime || (currentMedia.episode_run_time && currentMedia.episode_run_time[0]))"></span>
+                        </div>
+                    </div>
+
+                    <button @click="closeDetailsModal()" class="p-3 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 backdrop-blur-md transition-all shadow-xl">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+
+                <!-- Main details content -->
+                <div class="relative z-20 px-6 sm:px-12 pb-12 max-w-4xl mt-auto space-y-6 flex-shrink-0">
+                    <div>
+                        <h1 class="text-4xl sm:text-6xl md:text-7xl font-black text-white tracking-tight text-glow mb-3" x-text="currentMedia.title || currentMedia.name"></h1>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <template x-for="g in currentMedia.genres">
+                                <span class="px-3 py-1 rounded-lg text-xs font-semibold bg-white/10 border border-white/20 text-white backdrop-blur-md" x-text="g.name"></span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <p class="text-base sm:text-lg text-gray-200 leading-relaxed font-light max-w-3xl" x-text="currentMedia.overview"></p>
+
+                    <div class="flex flex-wrap items-center gap-3 pt-2 relative">
+                        <button @click="launchStream(currentMedia)" class="px-7 py-3.5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black text-sm flex items-center space-x-2.5 glow-mono transition-all transform hover:scale-105 shadow-2xl">
+                            <i data-lucide="play" class="w-5 h-5 fill-black"></i>
+                            <span>WATCH NOW</span>
+                        </button>
+
+                        <button @click="toggleWatchlist(currentMedia)" 
+                                :class="isInWatchlist(currentMedia.id) ? 'bg-white/20 border-white text-white' : 'bg-black/60 border-white/30 text-white hover:bg-black/80'"
+                                class="px-5 py-3.5 rounded-2xl border font-bold text-sm flex items-center space-x-2 transition-all backdrop-blur-md shadow-xl">
+                            <i data-lucide="bookmark" class="w-4 h-4" :class="isInWatchlist(currentMedia.id) ? 'fill-white text-white' : ''"></i>
+                            <span x-text="isInWatchlist(currentMedia.id) ? 'In Watchlist' : 'Add to Watchlist'"></span>
+                        </button>
+
+                        <!-- TV Season & Episode Selectors -->
+                        <template x-if="currentMedia.media_type === 'tv'">
+                            <div class="flex items-center gap-3">
+                                <div class="relative">
+                                    <button @click="showSeasonDropdown = !showSeasonDropdown; showEpisodeDropdown = false;" 
+                                            class="px-5 py-3.5 rounded-2xl bg-black/60 border border-white/30 text-white font-bold text-sm flex items-center space-x-2 hover:bg-black/80 transition-all backdrop-blur-md shadow-xl">
+                                        <i data-lucide="layers" class="w-4 h-4"></i>
+                                        <span x-text="'Season ' + selectedSeason"></span>
+                                        <i data-lucide="chevron-up" class="w-4 h-4 transition-transform" :class="showSeasonDropdown ? 'rotate-180' : ''"></i>
+                                    </button>
+
+                                    <div x-show="showSeasonDropdown" 
+                                         @click.away="showSeasonDropdown = false"
+                                         class="absolute bottom-full mb-2 left-0 w-48 bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden z-30 max-h-56 overflow-y-auto p-1.5"
+                                         style="display: none;">
+                                        <template x-for="s in seasonList">
+                                            <button @click="selectSeason(s.season_number)"
+                                                    :class="selectedSeason === s.season_number ? 'bg-white text-black font-bold' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'"
+                                                    class="w-full text-left px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-between">
+                                                <span x-text="s.name || ('Season ' + s.season_number)"></span>
+                                                <template x-if="selectedSeason === s.season_number">
+                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                                </template>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="relative">
+                                    <button @click="showEpisodeDropdown = !showEpisodeDropdown; showSeasonDropdown = false;" 
+                                            class="px-5 py-3.5 rounded-2xl bg-black/60 border border-white/30 text-white font-bold text-sm flex items-center space-x-2 hover:bg-black/80 transition-all backdrop-blur-md shadow-xl">
+                                        <i data-lucide="film" class="w-4 h-4"></i>
+                                        <span x-text="'Episode ' + selectedEpisode"></span>
+                                        <i data-lucide="chevron-up" class="w-4 h-4 transition-transform" :class="showEpisodeDropdown ? 'rotate-180' : ''"></i>
+                                    </button>
+
+                                    <div x-show="showEpisodeDropdown" 
+                                         @click.away="showEpisodeDropdown = false"
+                                         class="absolute bottom-full mb-2 left-0 w-48 bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden z-30 max-h-56 overflow-y-auto p-1.5"
+                                         style="display: none;">
+                                        <template x-for="ep in episodesCountList">
+                                            <button @click="selectedEpisode = ep; showEpisodeDropdown = false;"
+                                                    :class="selectedEpisode === ep ? 'bg-white text-black font-bold' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'"
+                                                    class="w-full text-left px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-between">
+                                                <span x-text="'Episode ' + ep"></span>
+                                                <template x-if="selectedEpisode === ep">
+                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                                </template>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Streaming Player Modal -->
+    <div x-show="showStreamModal" 
+         class="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-2 sm:p-6"
+         style="display: none;">
+        <div class="relative bg-neutral-900 border border-white/30 rounded-3xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl flex flex-col h-[90vh]">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full bg-white animate-pulse"></div>
+                    <h3 class="text-lg font-bold text-white" x-text="currentMedia ? (currentMedia.title || currentMedia.name) + ' — Stream' : 'Live Stream'"></h3>
+                </div>
+                <button @click="closeStreamModal()" class="p-2.5 rounded-full bg-neutral-800 text-white hover:bg-neutral-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="flex-grow w-full rounded-2xl bg-black border border-neutral-800 overflow-hidden relative">
+                <template x-if="streamUrl">
+                    <iframe :src="streamUrl" class="w-full h-full border-0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div x-show="toastMessage" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         class="fixed bottom-6 right-6 z-50 bg-neutral-900 border border-white/40 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 backdrop-blur-xl"
+         style="display: none;">
+        <div class="w-7 h-7 rounded-xl bg-white text-black flex items-center justify-center font-bold">
+            <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+        </div>
+        <span class="text-sm font-semibold" x-text="toastMessage"></span>
+    </div>
+
+    <script>
+        const KEY = '3a73619bbb8fc6d47742d1b5b2b707b5';
+        const TMGB = 'https://api.themoviedb.org/3';
+        const IMGB = 'https://image.tmdb.org/t/p/';
+
+        function movieApp() {
+            return {
+                activeTab: 'home',
+                mediaType: 'movie',
+                searchQuery: '',
+                mediaList: [],
+                predictedMatches: [],
+                fullSearchResults: [],
+                featuredItem: null,
+                isLoading: false,
+                showSearchMenu: false,
+                watchlist: [],
+                showModal: false,
+                showStreamModal: false,
+                isSettingsAnimating: false,
+                currentMedia: null,
+                
+                // Profile & Streaming Hub variables
+                userName: 'user',
+                userInitial: 'U',
+                activeStreamer: 'All',
+                tempUserName: 'user',
+                tempActiveStreamer: 'All',
+
+                seasonList: [],
+                episodesCountList: [],
+                selectedSeason: 1,
+                selectedEpisode: 1,
+                showSeasonDropdown: false,
+                showEpisodeDropdown: false,
+                streamUrl: '',
+                toastMessage: '',
+
+                async init() {
+                    const savedWatchlist = localStorage.getItem('cineverse_watchlist_v5');
+                    if (savedWatchlist) {
+                        try { this.watchlist = JSON.parse(savedWatchlist); } catch(e) { this.watchlist = []; }
+                    }
+
+                    const savedProfile = localStorage.getItem('cineverse_profile_v5');
+                    if (savedProfile) {
+                        try {
+                            const p = JSON.parse(savedProfile);
+                            this.userName = p.name || 'user';
+                            this.userInitial = (this.userName.trim().charAt(0) || 'U').toUpperCase();
+                            this.activeStreamer = p.streamer || 'All';
+                        } catch(e) {}
+                    }
+
+                    await this.fetchMedia();
+
+                    this.$nextTick(() => lucide.createIcons());
+                    this.$watch('activeTab', () => setTimeout(() => lucide.createIcons(), 50));
+                    this.$watch('mediaType', () => { if(this.activeTab === 'home') this.fetchMedia(); });
+                    this.$watch('activeStreamer', () => { if(this.activeTab === 'home') this.fetchMedia(); });
+                    this.$watch('showModal', () => setTimeout(() => lucide.createIcons(), 50));
+                    this.$watch('showStreamModal', () => setTimeout(() => lucide.createIcons(), 50));
+                    this.$watch('showSearchMenu', () => setTimeout(() => lucide.createIcons(), 50));
+                },
+
+                getImageUrl(path, size = 'w500') {
+                    if (!path) return 'https://placehold.co/500x750/141414/ffffff?text=CineVerse';
+                    return `${IMGB}${size}${path}`;
+                },
+
+                formatRuntime(minutes) {
+                    if (!minutes) return '45 mins';
+                    const hrs = Math.floor(minutes / 60);
+                    const mins = minutes % 60;
+                    if (hrs === 0) return `${mins} mins`;
+                    if (mins === 0) return `${hrs} hr${hrs > 1 ? 's' : ''}`;
+                    return `${hrs} hr${hrs > 1 ? 's' : ''} ${mins} mins`;
+                },
+
+                openSettings() {
+                    this.isSettingsAnimating = true;
+                    this.tempUserName = this.userName;
+                    this.tempActiveStreamer = this.activeStreamer;
+                    this.activeTab = 'settings';
+                    setTimeout(() => {
+                        this.isSettingsAnimating = false;
+                    }, 600);
+                },
+
+                saveSettings() {
+                    this.userName = this.tempUserName.trim() || 'user';
+                    this.userInitial = this.userName.charAt(0).toUpperCase();
+                    this.activeStreamer = this.tempActiveStreamer;
+                    
+                    localStorage.setItem('cineverse_profile_v5', JSON.stringify({
+                        name: this.userName,
+                        streamer: this.activeStreamer
+                    }));
+
+                    this.activeTab = 'home';
+                    this.fetchMedia();
+                    this.showToast(`Saved settings for "${this.userName}" (${this.activeStreamer})`);
+                },
+
+                async fetchMedia() {
+                    this.isLoading = true;
+                    try {
+                        let results = [];
+                        // Professional studio filter mapping or multi-provider fetching
+                        if (this.activeStreamer === 'All') {
+                            const url = `${TMGB}/discover/${this.mediaType}?api_key=${KEY}&sort_by=popularity.desc&vote_count.gte=100`;
+                            const res = await fetch(url);
+                            const data = await res.json();
+                            results = data.results || [];
+                        } else {
+                            // Map specific streaming networks/providers to professional network IDs on TMDB
+                            let networkId = '8'; // Default Netflix
+                            if (this.activeStreamer === 'Netflix') networkId = '213';
+                            else if (this.activeStreamer === 'Prime Video') networkId = '1024';
+                            else if (this.activeStreamer === 'Disney+') networkId = '2739';
+                            else if (this.activeStreamer === 'HBO Max') networkId = '49';
+                            else if (this.activeStreamer === 'Apple TV+') networkId = '2552';
+                            else if (this.activeStreamer === 'Paramount+') networkId = '4330';
+
+                            if (this.mediaType === 'tv') {
+                                const url = `${TMGB}/discover/tv?api_key=${KEY}&with_networks=${networkId}&sort_by=popularity.desc`;
+                                const res = await fetch(url);
+                                const data = await res.json();
+                                results = data.results || [];
+                            } else {
+                                // For movies, query via discover with studio company IDs or fallback search/discover
+                                const url = `${TMGB}/discover/movie?api_key=${KEY}&sort_by=popularity.desc&vote_count.gte=50`;
+                                const res = await fetch(url);
+                                const data = await res.json();
+                                results = data.results || [];
+                            }
+                        }
+                        
+                        // Ensure strict professional filtering (no user uploads/duplicates)
+                        const seenIds = new Set();
+                        this.mediaList = results
+                            .filter(item => {
+                                if (!item.poster_path || !item.backdrop_path) return false;
+                                if (seenIds.has(item.id)) return false;
+                                seenIds.add(item.id);
+                                return true;
+                            })
+                            .slice(0, 20)
+                            .map(item => ({
+                                ...item,
+                                media_type: this.mediaType
+                            }));
+                        
+                        if (this.mediaList.length > 0) {
+                            this.featuredItem = this.mediaList[0];
+                        } else {
+                            this.featuredItem = null;
+                        }
+                    } catch (e) {
+                        console.error("Error fetching studio media:", e);
+                    } finally {
+                        this.isLoading = false;
+                        setTimeout(() => lucide.createIcons(), 50);
+                    }
+                },
+
+                async handlePredictionInput() {
+                    const q = this.searchQuery.trim();
+                    if (q.length === 0) {
+                        this.predictedMatches = [];
+                        this.showSearchMenu = false;
+                        return;
+                    }
+
+                    this.showSearchMenu = true;
+                    try {
+                        const [movieRes, tvRes] = await Promise.all([
+                            fetch(`${TMGB}/search/movie?api_key=${KEY}&query=${encodeURIComponent(q)}`),
+                            fetch(`${TMGB}/search/tv?api_key=${KEY}&query=${encodeURIComponent(q)}`)
+                        ]);
+                        const movieData = await movieRes.json();
+                        const tvData = await tvRes.json();
+
+                        const movies = (movieData.results || []).filter(item => item.poster_path).slice(0, 3).map(i => ({...i, media_type: 'movie'}));
+                        const shows = (tvData.results || []).filter(item => item.poster_path).slice(0, 3).map(i => ({...i, media_type: 'tv'}));
+
+                        const combined = [...movies, ...shows];
+                        const uniqueMap = new Map();
+                        combined.forEach(i => uniqueMap.set(i.id, i));
+                        this.predictedMatches = Array.from(uniqueMap.values()).slice(0, 6);
+
+                        if (this.predictedMatches.length === 0) {
+                            this.showSearchMenu = false;
+                        }
+                    } catch (e) {
+                        console.error("Error in prediction search:", e);
+                        this.predictedMatches = [];
+                    }
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                async executeFullSearch() {
+                    const q = this.searchQuery.trim();
+                    if (!q) return;
+                    this.showSearchMenu = false;
+                    this.isLoading = true;
+                    this.activeTab = 'full-search';
+
+                    try {
+                        const [movieRes, tvRes] = await Promise.all([
+                            fetch(`${TMGB}/search/movie?api_key=${KEY}&query=${encodeURIComponent(q)}`),
+                            fetch(`${TMGB}/search/tv?api_key=${KEY}&query=${encodeURIComponent(q)}`)
+                        ]);
+                        const movieData = await movieRes.json();
+                        const tvData = await tvRes.json();
+
+                        const movies = (movieData.results || []).filter(item => item.poster_path).map(i => ({...i, media_type: 'movie'}));
+                        const shows = (tvData.results || []).filter(item => item.poster_path).map(i => ({...i, media_type: 'tv'}));
+
+                        const combined = [...movies, ...shows];
+                        const uniqueMap = new Map();
+                        combined.forEach(i => uniqueMap.set(i.id, i));
+                        this.fullSearchResults = Array.from(uniqueMap.values());
+                    } catch (e) {
+                        console.error("Error in full search:", e);
+                        this.fullSearchResults = [];
+                    } finally {
+                        this.isLoading = false;
+                        setTimeout(() => lucide.createIcons(), 50);
+                    }
+                },
+
+                clearSearch() {
+                    this.searchQuery = '';
+                    this.predictedMatches = [];
+                    this.showSearchMenu = false;
+                },
+
+                resetHome() {
+                    this.activeTab = 'home';
+                    this.searchQuery = '';
+                    this.predictedMatches = [];
+                    this.showSearchMenu = false;
+                    this.fetchMedia();
+                },
+
+                async openDetailsModal(item) {
+                    const type = item.media_type ? item.media_type : (this.mediaType === 'tv' || item.first_air_date ? 'tv' : 'movie');
+                    try {
+                        const res = await fetch(`${TMGB}/${type}/${item.id}?api_key=${KEY}`);
+                        const data = await res.json();
+                        this.currentMedia = { ...data, media_type: type };
+                        
+                        this.selectedSeason = 1;
+                        this.selectedEpisode = 1;
+                        this.showSeasonDropdown = false;
+                        this.showEpisodeDropdown = false;
+
+                        if (type === 'tv' && data.seasons) {
+                            this.seasonList = data.seasons.filter(s => s.season_number >= 0);
+                            if (this.seasonList.length > 0) {
+                                this.selectedSeason = this.seasonList[0].season_number;
+                                await this.fetchEpisodesForSeason(item.id, this.selectedSeason);
+                            }
+                        }
+
+                        this.showModal = true;
+                        document.body.style.overflow = 'hidden';
+                        setTimeout(() => lucide.createIcons(), 50);
+                    } catch (e) {
+                        console.error("Error fetching media details:", e);
+                    }
+                },
+
+                async fetchEpisodesForSeason(tvId, seasonNum) {
+                    try {
+                        const res = await fetch(`${TMGB}/tv/${tvId}/season/${seasonNum}?api_key=${KEY}`);
+                        const data = await res.json();
+                        const count = data.episodes ? data.episodes.length : 10;
+                        this.episodesCountList = Array.from({length: count}, (_, i) => i + 1);
+                        this.selectedEpisode = 1;
+                    } catch (e) {
+                        this.episodesCountList = Array.from({length: 10}, (_, i) => i + 1);
+                    }
+                },
+
+                async selectSeason(seasonNum) {
+                    this.selectedSeason = seasonNum;
+                    this.showSeasonDropdown = false;
+                    if (this.currentMedia) {
+                        await this.fetchEpisodesForSeason(this.currentMedia.id, seasonNum);
+                    }
+                },
+
+                closeDetailsModal() {
+                    this.showModal = false;
+                    document.body.style.overflow = 'auto';
+                },
+
+                launchStream(item) {
+                    const type = item.media_type;
+                    if (type === 'movie') {
+                        this.streamUrl = `https://streamrip.fun/play?type=movie&id=${item.id}`;
+                    } else {
+                        this.streamUrl = `https://streamrip.fun/play?type=tv&id=${item.id}&s=${this.selectedSeason}&ep=${this.selectedEpisode}`;
+                    }
+                    this.showModal = false;
+                    this.showStreamModal = true;
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                closeStreamModal() {
+                    this.showStreamModal = false;
+                    this.streamUrl = '';
+                    document.body.style.overflow = 'auto';
+                },
+
+                toggleWatchlist(item) {
+                    const index = this.watchlist.findIndex(m => m.id === item.id);
+                    const title = item.title || item.name;
+                    if (index > -1) {
+                        this.watchlist.splice(index, 1);
+                        this.showToast(`Removed "${title}" from Watchlist`);
+                    } else {
+                        this.watchlist.push(item);
+                        this.showToast(`Added "${title}" to Watchlist`);
+                    }
+                    localStorage.setItem('cineverse_watchlist_v5', JSON.stringify(this.watchlist));
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                isInWatchlist(itemId) {
+                    return this.watchlist.some(m => m.id === itemId);
+                },
+
+                showToast(message) {
+                    this.toastMessage = message;
+                    setTimeout(() => {
+                        if (this.toastMessage === message) this.toastMessage = '';
+                    }, 3500);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
