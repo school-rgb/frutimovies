@@ -1,828 +1,520 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>frutimovies</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        cinematic: {
-                            950: '#000000',
-                            900: '#0a0a0a',
-                            800: '#141414',
-                            700: '#262626',
-                            600: '#404040',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> frutimovies </title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            vaultBg: 'transparent',
+            vaultPanel: 'transparent',
+            vaultCard: 'transparent',
+            vaultBorder: 'rgba(255, 255, 255, 0.1)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
         }
-    </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #000000;
-            color: #f3f4f6;
-            overflow-x: hidden;
-        }
-        .glow-mono {
-            box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
-        }
-        .text-glow {
-            text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
-        }
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #000000;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #262626;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #404040;
-        }
-    </style>
+      }
+    }
+  </script>
+
+  <style>
+    /* Absolute No Background - Fully Transparent Base */
+    html, body {
+      background-color: transparent !important;
+      background: transparent !important;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100vh;
+      color: #ffffff;
+    }
+
+    /* Monochrome Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Ultra-Clear Glass Header */
+    .glass-header {
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Strict 2:3 Poster Aspect Ratio */
+    .poster-card {
+      aspect-ratio: 2 / 3;
+    }
+
+    /* Shimmer Skeleton Animation */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite;
+    }
+  </style>
 </head>
-<body x-data="movieApp()" x-init="init()" class="bg-black text-gray-100 min-h-screen selection:bg-white selection:text-black flex flex-col pb-24">
+<body class="bg-transparent text-white antialiased min-h-screen flex flex-col selection:bg-white selection:text-black">
 
-    <!-- Top Main Header (Logo & Integrated Search) -->
-    <header class="sticky top-0 z-30 backdrop-blur-xl bg-black/80 border-b border-neutral-800 transition-all duration-300">
-        <div class="w-full px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
-            
-            <!-- Logo & Brand Name -->
-            <div class="flex items-center space-x-3 cursor-pointer flex-shrink-0" @click="setTab('home')">
-                <img src="https://github.com/school-rgb/frutiger-logo/blob/main/Screenshot%202026-09-20%2010.14.00%20PM-inverted.png?raw=true" alt="Frutimovies Logo" class="w-8 h-8 object-contain">
-                <span class="text-xl font-black tracking-wider text-white">Frutimovies</span>
-            </div>
-
-            <!-- Integrated Search Bar -->
-            <div class="flex-1 max-w-2xl relative" @click.away="showSearchMenu = false">
-                <form @submit.prevent="executeFullSearch()" class="relative w-full">
-                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
-                        <i data-lucide="search" class="w-4 h-4"></i>
-                    </span>
-                    <input type="text" 
-                           x-model="searchQuery" 
-                           @focus="if(searchQuery.trim().length > 0) showSearchMenu = true"
-                           @input.debounce.250ms="handlePredictionInput()"
-                           placeholder="Search all movies & TV shows across all services..." 
-                           class="w-full pl-10 pr-9 py-2.5 bg-neutral-900 border border-neutral-800 focus:border-white rounded-xl text-xs sm:text-sm text-gray-200 placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-white/25 transition-all shadow-md">
-                    
-                    <template x-if="searchQuery">
-                        <button type="button" @click="clearSearch()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-white">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>
-                    </template>
-                </form>
-
-                <!-- Search Dropdown Menu -->
-                <div x-show="showSearchMenu && predictedMatches.length > 0 && searchQuery.trim().length > 0" 
-                     x-transition:enter="transition ease-out duration-200"
-                     x-transition:enter-start="opacity-0 translate-y-2 scale-95"
-                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                     class="absolute top-full left-0 right-0 mt-2 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden z-50 backdrop-blur-2xl p-2"
-                     style="display: none;">
-
-                    <div class="max-h-80 overflow-y-auto space-y-1.5 pr-1">
-                        <template x-for="item in predictedMatches" :key="item.id">
-                            <div @click="openDetailsModal(item); showSearchMenu = false;" 
-                                 class="flex items-center space-x-3.5 p-2 rounded-xl hover:bg-neutral-900 cursor-pointer transition-all border border-transparent hover:border-neutral-800 group">
-                                
-                                <div class="relative w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900 border border-neutral-800">
-                                    <img :src="getImageUrl(item.poster_path, 'w300')" :alt="item.title || item.name" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/300x450/141414/ffffff?text=Movie'">
-                                </div>
-
-                                <div class="flex-grow min-w-0">
-                                    <div class="flex items-center space-x-2">
-                                        <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-glow truncate" x-text="item.title || item.name"></h4>
-                                    </div>
-                                    <div class="flex items-center space-x-3 mt-1">
-                                        <span class="text-[10px] sm:text-xs text-neutral-400 flex items-center gap-1">
-                                            <i data-lucide="calendar" class="w-3 h-3"></i> <span x-text="(item.release_date || item.first_air_date || '2026').substring(0,4)"></span>
-                                        </span>
-                                        <span class="text-[10px] sm:text-xs text-amber-400 font-semibold flex items-center gap-0.5">
-                                            <i data-lucide="star" class="w-3 h-3 fill-amber-400"></i> <span x-text="item.vote_average ? item.vote_average.toFixed(1) : '7.0'"></span>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
+  <!-- TOP HEADER & MINIMAL SEARCH BAR -->
+  <header class="sticky top-0 z-40 w-full glass-header px-2 sm:px-4 py-2.5">
+    <div class="w-full flex items-center justify-between gap-2 sm:gap-4">
+      
+      <!-- Mode Switcher: Movies vs TV Shows -->
+      <div class="flex items-center shrink-0">
+        <div class="flex bg-black/40 border border-white/10 rounded p-0.5 backdrop-blur-md">
+          <button 
+            id="btnMovieMode" 
+            class="px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-black shadow"
+          >
+            <i class="fa-solid fa-film text-[10px]"></i>
+            <span class="tracking-wide">Movies</span>
+          </button>
+          <button 
+            id="btnTvMode" 
+            class="px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 text-neutral-400 hover:text-white"
+          >
+            <i class="fa-solid fa-tv text-[10px]"></i>
+            <span class="tracking-wide">TV Shows</span>
+          </button>
         </div>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative flex-1 max-w-2xl mx-auto group">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xs group-focus-within:text-white transition-colors"></i>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Search vault..." 
+          class="w-full bg-black/40 backdrop-blur-md text-xs sm:text-sm text-white placeholder-neutral-400 rounded pl-10 pr-10 py-1.5 border border-white/10 focus:border-white/40 focus:outline-none transition-all shadow-inner"
+          autocomplete="off"
+        >
+        <button id="btnClearSearch" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1 transition-colors">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN POSTER GRID SECTION -->
+  <main class="flex-1 w-full p-1 sm:p-2">
+    <div 
+      id="posterGrid" 
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-1 sm:gap-2 w-full min-h-[85vh]"
+    ></div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden min-h-[60vh] flex flex-col items-center justify-center text-center p-6">
+      <div class="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center mb-3 text-neutral-400">
+        <i class="fa-solid fa-ghost text-xl"></i>
+      </div>
+      <h3 class="text-xs font-bold text-neutral-300 uppercase tracking-widest">No Posters Found</h3>
+      <button id="btnResetSearch" class="mt-4 px-4 py-1.5 bg-white text-black text-xs font-bold rounded hover:bg-neutral-200 transition-all shadow">
+        Reset Search
+      </button>
+    </div>
+
+    <!-- Pagination -->
+    <div id="paginationContainer" class="py-8 flex justify-center items-center">
+      <button 
+        id="btnLoadMore" 
+        class="hidden px-6 py-2 rounded bg-black/50 backdrop-blur-md hover:bg-black/70 border border-white/10 text-xs font-bold text-neutral-300 hover:text-white transition-all shadow"
+      >
+        <span>Load More</span>
+        <i class="fa-solid fa-arrow-down text-[10px]"></i>
+      </button>
+    </div>
+  </main>
+
+  <!-- EMBEDDED PLAYER MODAL WITH MULTI-SERVER SUPPORT -->
+  <div id="playerModal" class="fixed inset-0 z-50 hidden flex flex-col bg-black/80 backdrop-blur-xl transition-colors duration-200">
+    <!-- Player Top Header -->
+    <header class="p-2 sm:px-4 bg-black/60 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2 z-20 shrink-0">
+      <div class="flex items-center gap-2 max-w-xs sm:max-w-md truncate">
+        <h3 id="playerTitle" class="text-xs sm:text-sm font-bold text-white truncate">Title</h3>
+      </div>
+
+      <!-- Controls: Server Switcher, Season & Episode Switchers -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Server Switcher -->
+        <div class="flex items-center gap-1">
+          <span class="text-xs text-neutral-400 font-semibold">Server:</span>
+          <select id="playerServerSelect" class="bg-black/60 border border-white/10 text-xs text-neutral-300 rounded px-2 py-1 focus:outline-none">
+            <option value="vidcore">VidCore</option>
+            <option value="viduki">VidUki</option>
+            <option value="streamrip">StreamRip</option>
+            <option value="vidfast">VidFast</option>
+            <option value="vidfast_vc">VidFast VC</option>
+            <option value="vidlink">VidLink</option>
+            <option value="vidsrc">VidSrc.to</option>
+          </select>
+        </div>
+
+        <!-- TV Controls (Visible only for TV Shows) -->
+        <div id="tvControls" class="hidden items-center gap-2">
+          <div class="flex items-center gap-1">
+            <span class="text-xs text-neutral-400 font-semibold">Season:</span>
+            <select id="playerSeasonSelect" class="bg-black/60 border border-white/10 text-xs text-neutral-300 rounded px-2 py-1 focus:outline-none">
+              <option value="1">Season 1</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1">
+            <span class="text-xs text-neutral-400 font-semibold">Episode:</span>
+            <select id="playerEpisodeSelect" class="bg-black/60 border border-white/10 text-xs text-neutral-300 rounded px-2 py-1 focus:outline-none">
+              <option value="1">Ep 1</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Close Button -->
+      <button id="btnClosePlayer" class="w-7 h-7 rounded bg-black/60 hover:bg-white hover:text-black border border-white/10 text-neutral-300 flex items-center justify-center transition-all">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
     </header>
 
-    <!-- Main App Content Area -->
-    <div class="flex-1 flex flex-col min-w-0 w-full">
-
-        <!-- FULL-WIDTH HERO BANNER (Only displayed on Home tab) -->
-        <template x-if="activeTab === 'home' && featuredItem">
-            <section class="relative w-full overflow-hidden mb-8 border-b border-neutral-800 bg-neutral-900 group">
-                <div class="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
-                <div class="absolute inset-0 z-10 bg-gradient-to-r from-black via-black/80 to-transparent w-full md:w-3/4"></div>
-                
-                <div class="relative h-[480px] sm:h-[540px] md:h-[600px] w-full bg-black">
-                    <img :src="getImageUrl(featuredItem.backdrop_path, 'w1280')" :alt="featuredItem.title || featuredItem.name" class="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-1000" onerror="this.src='https://placehold.co/1280x720/141414/ffffff?text=CineVerse'">
-                </div>
-
-                <div class="absolute bottom-0 left-0 right-0 z-20 p-6 sm:p-10 md:p-14 max-w-5xl">
-                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
-                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/10 text-white border border-white/20 flex items-center gap-1 backdrop-blur-md">
-                            <i data-lucide="star" class="w-3.5 h-3.5 fill-white text-white"></i> <span x-text="featuredItem.vote_average ? featuredItem.vote_average.toFixed(1) : '7.5'"></span>
-                        </span>
-                    </div>
-
-                    <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight mb-4 text-glow" x-text="featuredItem.title || featuredItem.name"></h1>
-                    
-                    <p class="text-sm sm:text-base text-gray-300 line-clamp-3 mb-6 max-w-2xl leading-relaxed" x-text="featuredItem.overview"></p>
-
-                    <div class="flex flex-wrap items-center gap-4">
-                        <button @click="openDetailsModal(featuredItem)" class="px-7 py-3.5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-extrabold text-sm flex items-center space-x-3 glow-mono transition-all transform hover:-translate-y-0.5">
-                            <i data-lucide="play" class="w-5 h-5 fill-black flex-shrink-0"></i>
-                            <span>WATCH NOW</span>
-                        </button>
-                        
-                        <button @click="toggleWatchlist(featuredItem)" 
-                                :class="isInWatchlist(featuredItem.id) ? 'bg-white/20 border-white text-white' : 'bg-neutral-800/80 border-neutral-700 text-gray-200 hover:bg-neutral-700'"
-                                class="px-5 py-3.5 rounded-2xl border font-semibold text-sm flex items-center space-x-2 transition-all backdrop-blur-md">
-                            <i data-lucide="bookmark" class="w-4 h-4" :class="isInWatchlist(featuredItem.id) ? 'fill-white text-white' : ''"></i>
-                            <span x-text="isInWatchlist(featuredItem.id) ? 'In Watchlist' : 'Add to Watchlist'"></span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-        </template>
-
-        <main class="w-full px-4 sm:px-6 lg:px-8 py-4 flex-grow relative">
-
-            <!-- HOME / MOVIES / TV TAB CONTENT -->
-            <div x-show="['home', 'movies', 'tv'].includes(activeTab)" x-transition:enter.opacity.duration.300ms>
-                
-                <!-- Section Header -->
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                        <i data-lucide="film" class="w-6 h-6 text-white" x-show="activeTab === 'movies' || (activeTab === 'home' && mediaType === 'movie')"></i>
-                        <i data-lucide="tv" class="w-6 h-6 text-white" x-show="activeTab === 'tv' || (activeTab === 'home' && mediaType === 'tv')"></i>
-                        <i data-lucide="sparkles" class="w-6 h-6 text-white" x-show="activeTab === 'home'"></i>
-                        <span x-text="activeTab === 'home' ? 'Trending Catalog' : (activeTab === 'movies' ? 'Movies Catalog' : 'TV Shows Catalog')"></span>
-                    </h2>
-                </div>
-
-                <!-- Loading State -->
-                <template x-if="isLoading">
-                    <div class="flex justify-center items-center py-32">
-                        <div class="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
-                    </div>
-                </template>
-
-                <!-- Full Width Screen-to-Screen Grid -->
-                <template x-if="!isLoading">
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 sm:gap-6 w-full">
-                        <template x-for="item in mediaList" :key="item.id">
-                            <div @click="openDetailsModal(item)" class="group relative rounded-2xl overflow-hidden border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer shadow-xl aspect-[2/3] bg-neutral-950">
-                                
-                                <img :src="getImageUrl(item.poster_path, 'w500')" :alt="item.title || item.name" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.src='https://placehold.co/500x750/141414/ffffff?text=No+Poster'">
-
-                                <div class="absolute top-2.5 right-2.5 z-20 overflow-hidden h-10 w-10 pointer-events-none">
-                                    <button @click.stop="toggleWatchlist(item)" 
-                                            class="pointer-events-auto p-2 rounded-xl bg-black/70 backdrop-blur-md border border-white/20 text-white hover:bg-black/95 transition-all shadow-lg flex items-center justify-center transform -translate-y-12 group-hover:translate-y-0 duration-300 ease-out w-full h-full">
-                                        <i data-lucide="bookmark" class="w-4 h-4" :class="isInWatchlist(item.id) ? 'fill-white text-white' : 'text-white'"></i>
-                                    </button>
-                                </div>
-
-                                <div class="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black via-black/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out flex flex-col justify-end p-4 z-10">
-                                    <h3 class="font-bold text-sm text-white line-clamp-2 mb-2 text-glow" x-text="item.title || item.name"></h3>
-                                    
-                                    <div class="flex items-center space-x-1.5">
-                                        <div class="flex items-center text-amber-400">
-                                            <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
-                                        </div>
-                                        <span class="text-xs font-bold text-white" x-text="item.vote_average ? item.vote_average.toFixed(1) : 'N/A'"></span>
-                                        <span class="text-[10px] text-neutral-400 ml-auto uppercase font-semibold px-1.5 py-0.5 bg-neutral-900/80 rounded border border-neutral-700" x-text="mediaType"></span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </template>
-                    </div>
-                </template>
-
-            </div>
-
-            <!-- FULL SEARCH RESULTS TAB -->
-            <div x-show="activeTab === 'full-search'" x-transition:enter.opacity.duration.300ms style="display: none;">
-                <div class="flex items-center justify-between mb-8">
-                    <div>
-                        <h2 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                            <i data-lucide="search" class="w-7 h-7 text-white"></i>
-                            Full Search Results for "<span x-text="searchQuery"></span>"
-                        </h2>
-                        <p class="text-sm text-neutral-400 mt-1">Films and TV shows catalog.</p>
-                    </div>
-                    <button @click="resetHome()" class="px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs font-semibold hover:bg-neutral-800">
-                        Back to Home
-                    </button>
-                </div>
-
-                <template x-if="fullSearchResults.length > 0">
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 sm:gap-6 w-full">
-                        <template x-for="item in fullSearchResults" :key="item.id">
-                            <div @click="openDetailsModal(item)" class="group relative rounded-2xl overflow-hidden border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer shadow-xl aspect-[2/3] bg-neutral-950">
-                                
-                                <img :src="getImageUrl(item.poster_path, 'w500')" :alt="item.title || item.name" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.src='https://placehold.co/500x750/141414/ffffff?text=No+Poster'">
-
-                                <div class="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black via-black/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out flex flex-col justify-end p-4 z-10">
-                                    <h3 class="font-bold text-sm text-white line-clamp-2 mb-2 text-glow" x-text="item.title || item.name"></h3>
-                                    
-                                    <div class="flex items-center space-x-1.5">
-                                        <div class="flex items-center text-amber-400">
-                                            <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
-                                        </div>
-                                        <span class="text-xs font-bold text-white" x-text="item.vote_average ? item.vote_average.toFixed(1) : 'N/A'"></span>
-                                        <span class="text-[10px] text-neutral-400 ml-auto uppercase font-semibold px-1.5 py-0.5 bg-neutral-900/80 rounded border border-neutral-700" x-text="item.media_type"></span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </template>
-                    </div>
-                </template>
-
-                <template x-if="fullSearchResults.length === 0">
-                    <div class="text-center py-28 bg-neutral-900/50 rounded-3xl border border-neutral-800 max-w-2xl mx-auto">
-                        <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                            <i data-lucide="frown" class="w-10 h-10"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">No Results Found</h3>
-                        <p class="text-sm text-neutral-400 max-w-md mx-auto mb-6">We couldn't find any films matching your search.</p>
-                        <button @click="resetHome()" class="px-6 py-3 rounded-2xl bg-white text-black font-bold text-sm shadow-lg hover:bg-neutral-200 transition-all">
-                            Return Home
-                        </button>
-                    </div>
-                </template>
-            </div>
-
-            <!-- WATCHLIST TAB -->
-            <div x-show="activeTab === 'watchlist'" x-transition:enter.opacity.duration.300ms style="display: none;">
-                <div class="mb-8">
-                    <h2 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                        <i data-lucide="bookmark" class="w-7 h-7 text-white fill-white/20"></i>
-                        My frutimovies Watchlist
-                    </h2>
-                    <p class="text-sm text-neutral-400 mt-1">Your saved films and TV shows.</p>
-                </div>
-
-                <template x-if="watchlist.length > 0">
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 sm:gap-6 w-full">
-                        <template x-for="item in watchlist" :key="item.id">
-                            <div @click="openDetailsModal(item)" class="group relative rounded-2xl overflow-hidden border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer shadow-xl aspect-[2/3] bg-neutral-950">
-                                
-                                <img :src="getImageUrl(item.poster_path, 'w500')" :alt="item.title || item.name" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.src='https://placehold.co/500x750/141414/ffffff?text=No+Poster'">
-                                
-                                <div class="absolute top-2.5 right-2.5 z-20 overflow-hidden h-10 w-10 pointer-events-none">
-                                    <button @click.stop="toggleWatchlist(item)" 
-                                            class="pointer-events-auto p-2 rounded-xl bg-white text-black hover:bg-neutral-200 transition-all shadow-lg flex items-center justify-center transform -translate-y-12 group-hover:translate-y-0 duration-300 ease-out w-full h-full"
-                                            title="Remove from Watchlist">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
-
-                                <div class="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black via-black/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out flex flex-col justify-end p-4 z-10">
-                                    <h3 class="font-bold text-sm text-white line-clamp-2 mb-2 text-glow" x-text="item.title || item.name"></h3>
-                                    
-                                    <div class="flex items-center space-x-1.5">
-                                        <div class="flex items-center text-amber-400">
-                                            <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
-                                        </div>
-                                        <span class="text-xs font-bold text-white" x-text="item.vote_average ? item.vote_average.toFixed(1) : 'N/A'"></span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </template>
-                    </div>
-                </template>
-
-                <template x-if="watchlist.length === 0">
-                    <div class="text-center py-28 bg-neutral-900/50 rounded-3xl border border-neutral-800 max-w-2xl mx-auto">
-                        <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                            <i data-lucide="bookmark-plus" class="w-10 h-10"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Your Watchlist is Empty</h3>
-                        <p class="text-sm text-neutral-400 max-w-md mx-auto mb-6">Add films to watch them anytime.</p>
-                        <button @click="resetHome()" class="px-6 py-3 rounded-2xl bg-white text-black font-bold text-sm shadow-lg hover:bg-neutral-200 transition-all">
-                            Explore Movies
-                        </button>
-                    </div>
-                </template>
-            </div>
-
-        </main>
+    <!-- Player iframe Canvas Area -->
+    <div class="flex-1 w-full bg-transparent flex items-center justify-center relative">
+      <iframe id="mediaPlayerIframe" src="" class="w-full h-full border-0 bg-transparent" allowfullscreen></iframe>
     </div>
+  </div>
 
-    <!-- Bottom Navigation Bar -->
-    <nav class="fixed bottom-0 inset-x-0 z-40 bg-black/90 backdrop-blur-2xl border-t border-neutral-800 py-3 px-6 flex items-center justify-around sm:justify-center sm:gap-12 shadow-2xl">
-        
-        <!-- Home Button -->
-        <button @click="setTab('home')" 
-                :class="activeTab === 'home' ? 'text-white font-bold' : 'text-neutral-400 hover:text-white font-medium'" 
-                class="flex flex-col items-center space-y-1 text-xs transition-colors py-1 px-4 rounded-xl">
-            <i data-lucide="home" class="w-5 h-5"></i>
-            <span>Home</span>
-        </button>
+  <!-- JAVASCRIPT ENGINE -->
+  <script>
+    const TMDB_API_KEY = "3fd2be6f0c70a2a598f084ddfb75487c";
+    const TMDB_IMG_BASE = "https://image.tmdb.org/t/p/w500";
 
-        <!-- Movies Button -->
-        <button @click="setTab('movies')" 
-                :class="activeTab === 'movies' ? 'text-white font-bold' : 'text-neutral-400 hover:text-white font-medium'" 
-                class="flex flex-col items-center space-y-1 text-xs transition-colors py-1 px-4 rounded-xl">
-            <i data-lucide="film" class="w-5 h-5"></i>
-            <span>Movies</span>
-        </button>
+    const state = {
+      mode: 'MOVIE', // 'MOVIE' or 'TV'
+      query: '',
+      page: 1,
+      hasMorePages: true,
+      isLoading: false,
+      items: [],
+      activeItem: null,
+      selectedSeason: 1
+    };
 
-        <!-- TV Shows Button -->
-        <button @click="setTab('tv')" 
-                :class="activeTab === 'tv' ? 'text-white font-bold' : 'text-neutral-400 hover:text-white font-medium'" 
-                class="flex flex-col items-center space-y-1 text-xs transition-colors py-1 px-4 rounded-xl">
-            <i data-lucide="tv" class="w-5 h-5"></i>
-            <span>TV Shows</span>
-        </button>
+    const $ = id => document.getElementById(id);
+    const elements = {
+      btnMovieMode: $('btnMovieMode'),
+      btnTvMode: $('btnTvMode'),
+      searchInput: $('searchInput'),
+      btnClearSearch: $('btnClearSearch'),
+      posterGrid: $('posterGrid'),
+      emptyState: $('emptyState'),
+      btnResetSearch: $('btnResetSearch'),
+      btnLoadMore: $('btnLoadMore'),
+      
+      playerModal: $('playerModal'),
+      btnClosePlayer: $('btnClosePlayer'),
+      playerTitle: $('playerTitle'),
+      playerServerSelect: $('playerServerSelect'),
+      tvControls: $('tvControls'),
+      playerSeasonSelect: $('playerSeasonSelect'),
+      playerEpisodeSelect: $('playerEpisodeSelect'),
+      mediaPlayerIframe: $('mediaPlayerIframe')
+    };
 
-        <!-- Watchlist Button -->
-        <button @click="setTab('watchlist')" 
-                :class="activeTab === 'watchlist' ? 'text-white font-bold' : 'text-neutral-400 hover:text-white font-medium'" 
-                class="flex flex-col items-center space-y-1 text-xs transition-colors py-1 px-4 rounded-xl relative">
-            <div class="relative">
-                <i data-lucide="bookmark" class="w-5 h-5"></i>
-                <span x-show="watchlist.length > 0" class="absolute -top-1 -right-2.5 w-4 h-4 bg-white text-black rounded-full text-[10px] font-bold flex items-center justify-center animate-pulse" x-text="watchlist.length"></span>
-            </div>
-            <span>Watchlist</span>
-        </button>
+    function init() {
+      setupEventListeners();
+      fetchVaultData(true);
+    }
 
-    </nav>
+    function setupEventListeners() {
+      elements.btnMovieMode.addEventListener('click', () => switchVaultMode('MOVIE'));
+      elements.btnTvMode.addEventListener('click', () => switchVaultMode('TV'));
 
-    <!-- Details Modal -->
-    <div x-show="showModal" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 overflow-hidden bg-black flex flex-col"
-         style="display: none;">
-        
-        <template x-if="currentMedia">
-            <div class="relative h-screen w-full flex flex-col justify-between overflow-hidden">
-                
-                <div class="absolute inset-0 z-0 bg-black">
-                    <img :src="getImageUrl(currentMedia.backdrop_path, 'w1280')" :alt="currentMedia.title || currentMedia.name" class="w-full h-full object-cover object-center filter brightness-75 scale-105" onerror="this.src='https://placehold.co/1280x720/141414/ffffff?text=CineVerse'">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40"></div>
-                    <div class="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent w-full md:w-3/4"></div>
-                </div>
+      let searchTimer;
+      elements.searchInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        elements.btnClearSearch.classList.toggle('hidden', !val);
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          state.query = val;
+          fetchVaultData(true);
+        }, 350);
+      });
 
-                <!-- Top bar inside details menu -->
-                <div class="relative z-20 flex items-center justify-between p-6 sm:p-8 flex-shrink-0">
-                    <div class="flex items-center space-x-3">
-                        <span class="px-3.5 py-1 rounded-full text-xs font-bold bg-white/20 border border-white/40 text-white uppercase tracking-widest backdrop-blur-md" x-text="currentMedia.media_type === 'tv' ? 'TV Series' : 'Movie'"></span>
-                        <div class="flex items-center space-x-1 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 text-white font-bold text-xs">
-                            <i data-lucide="star" class="w-3.5 h-3.5 fill-white text-white"></i>
-                            <span x-text="currentMedia.vote_average ? currentMedia.vote_average.toFixed(1) : '7.0'"></span>
-                        </div>
-                        <div class="flex items-center space-x-1 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 text-white font-medium text-xs">
-                            <i data-lucide="clock" class="w-3.5 h-3.5 text-white"></i>
-                            <span x-text="formatRuntime(currentMedia.runtime || (currentMedia.episode_run_time && currentMedia.episode_run_time[0]))"></span>
-                        </div>
-                    </div>
+      elements.btnClearSearch.addEventListener('click', resetSearchField);
+      elements.btnResetSearch.addEventListener('click', resetSearchField);
 
-                    <button @click="closeDetailsModal()" class="p-3 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 backdrop-blur-md transition-all shadow-xl">
-                        <i data-lucide="x" class="w-6 h-6"></i>
-                    </button>
-                </div>
-
-                <!-- Main details content -->
-                <div class="relative z-20 px-6 sm:px-12 pb-12 max-w-4xl mt-auto space-y-6 flex-shrink-0">
-                    <div>
-                        <h1 class="text-4xl sm:text-6xl md:text-7xl font-black text-white tracking-tight text-glow mb-3" x-text="currentMedia.title || currentMedia.name"></h1>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <template x-for="g in currentMedia.genres">
-                                <span class="px-3 py-1 rounded-lg text-xs font-semibold bg-white/10 border border-white/20 text-white backdrop-blur-md" x-text="g.name"></span>
-                            </template>
-                        </div>
-                    </div>
-
-                    <p class="text-base sm:text-lg text-gray-200 leading-relaxed font-light max-w-3xl" x-text="currentMedia.overview"></p>
-
-                    <div class="flex flex-wrap items-center gap-3 pt-2 relative">
-                        <button @click="launchStream(currentMedia)" class="px-7 py-3.5 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black text-sm flex items-center space-x-2.5 glow-mono transition-all transform hover:scale-105 shadow-2xl">
-                            <i data-lucide="play" class="w-5 h-5 fill-black"></i>
-                            <span>WATCH NOW</span>
-                        </button>
-
-                        <button @click="toggleWatchlist(currentMedia)" 
-                                :class="isInWatchlist(currentMedia.id) ? 'bg-white/20 border-white text-white' : 'bg-black/60 border-white/30 text-white hover:bg-black/80'"
-                                class="px-5 py-3.5 rounded-2xl border font-bold text-sm flex items-center space-x-2 transition-all backdrop-blur-md shadow-xl">
-                            <i data-lucide="bookmark" class="w-4 h-4" :class="isInWatchlist(currentMedia.id) ? 'fill-white text-white' : ''"></i>
-                            <span x-text="isInWatchlist(currentMedia.id) ? 'In Watchlist' : 'Add to Watchlist'"></span>
-                        </button>
-
-                        <!-- TV Season & Episode Selectors -->
-                        <template x-if="currentMedia.media_type === 'tv'">
-                            <div class="flex items-center gap-3">
-                                <div class="relative">
-                                    <button @click="showSeasonDropdown = !showSeasonDropdown; showEpisodeDropdown = false;" 
-                                            class="px-5 py-3.5 rounded-2xl bg-black/60 border border-white/30 text-white font-bold text-sm flex items-center space-x-2 hover:bg-black/80 transition-all backdrop-blur-md shadow-xl">
-                                        <i data-lucide="layers" class="w-4 h-4"></i>
-                                        <span x-text="'Season ' + selectedSeason"></span>
-                                        <i data-lucide="chevron-up" class="w-4 h-4 transition-transform" :class="showSeasonDropdown ? 'rotate-180' : ''"></i>
-                                    </button>
-
-                                    <div x-show="showSeasonDropdown" 
-                                         @click.away="showSeasonDropdown = false"
-                                         class="absolute bottom-full mb-2 left-0 w-48 bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden z-30 max-h-56 overflow-y-auto p-1.5"
-                                         style="display: none;">
-                                        <template x-for="s in seasonList">
-                                            <button @click="selectSeason(s.season_number)"
-                                                    :class="selectedSeason === s.season_number ? 'bg-white text-black font-bold' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'"
-                                                    class="w-full text-left px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-between">
-                                                <span x-text="s.name || ('Season ' + s.season_number)"></span>
-                                                <template x-if="selectedSeason === s.season_number">
-                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                                </template>
-                                            </button>
-                                        </template>
-                                    </div>
-                                </div>
-
-                                <div class="relative">
-                                    <button @click="showEpisodeDropdown = !showEpisodeDropdown; showSeasonDropdown = false;" 
-                                            class="px-5 py-3.5 rounded-2xl bg-black/60 border border-white/30 text-white font-bold text-sm flex items-center space-x-2 hover:bg-black/80 transition-all backdrop-blur-md shadow-xl">
-                                        <i data-lucide="film" class="w-4 h-4"></i>
-                                        <span x-text="'Episode ' + selectedEpisode"></span>
-                                        <i data-lucide="chevron-up" class="w-4 h-4 transition-transform" :class="showEpisodeDropdown ? 'rotate-180' : ''"></i>
-                                    </button>
-
-                                    <div x-show="showEpisodeDropdown" 
-                                         @click.away="showEpisodeDropdown = false"
-                                         class="absolute bottom-full mb-2 left-0 w-48 bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden z-30 max-h-56 overflow-y-auto p-1.5"
-                                         style="display: none;">
-                                        <template x-for="ep in episodesCountList">
-                                            <button @click="selectedEpisode = ep; showEpisodeDropdown = false;"
-                                                    :class="selectedEpisode === ep ? 'bg-white text-black font-bold' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'"
-                                                    class="w-full text-left px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-between">
-                                                <span x-text="'Episode ' + ep"></span>
-                                                <template x-if="selectedEpisode === ep">
-                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                                </template>
-                                            </button>
-                                        </template>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </template>
-    </div>
-
-    <!-- Streaming Player Modal -->
-    <div x-show="showStreamModal" 
-         class="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-2 sm:p-6"
-         style="display: none;">
-        <div class="relative bg-neutral-900 border border-white/30 rounded-3xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl flex flex-col h-[90vh]">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center space-x-2">
-                    <div class="w-3 h-3 rounded-full bg-white animate-pulse"></div>
-                    <h3 class="text-lg font-bold text-white" x-text="currentMedia ? (currentMedia.title || currentMedia.name) + ' — Stream' : 'Live Stream'"></h3>
-                </div>
-                <button @click="closeStreamModal()" class="p-2.5 rounded-full bg-neutral-800 text-white hover:bg-neutral-700">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            
-            <div class="flex-grow w-full rounded-2xl bg-black border border-neutral-800 overflow-hidden relative">
-                <template x-if="streamUrl">
-                    <iframe :src="streamUrl" class="w-full h-full border-0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
-                </template>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div x-show="toastMessage" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 translate-y-4"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         class="fixed bottom-20 right-6 z-50 bg-neutral-900 border border-white/40 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 backdrop-blur-xl"
-         style="display: none;">
-        <div class="w-7 h-7 rounded-xl bg-white text-black flex items-center justify-center font-bold">
-            <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
-        </div>
-        <span class="text-sm font-semibold" x-text="toastMessage"></span>
-    </div>
-
-    <script>
-        const KEY = '3a73619bbb8fc6d47742d1b5b2b707b5';
-        const TMGB = 'https://api.themoviedb.org/3';
-        const IMGB = 'https://image.tmdb.org/t/p/';
-
-        function movieApp() {
-            return {
-                activeTab: 'home',
-                mediaType: 'movie',
-                searchQuery: '',
-                mediaList: [],
-                predictedMatches: [],
-                fullSearchResults: [],
-                featuredItem: null,
-                isLoading: false,
-                showSearchMenu: false,
-                watchlist: [],
-                showModal: false,
-                showStreamModal: false,
-                currentMedia: null,
-
-                seasonList: [],
-                episodesCountList: [],
-                selectedSeason: 1,
-                selectedEpisode: 1,
-                showSeasonDropdown: false,
-                showEpisodeDropdown: false,
-                streamUrl: '',
-                toastMessage: '',
-
-                async init() {
-                    const savedWatchlist = localStorage.getItem('cineverse_watchlist_v5');
-                    if (savedWatchlist) {
-                        try { this.watchlist = JSON.parse(savedWatchlist); } catch(e) { this.watchlist = []; }
-                    }
-
-                    await this.fetchMedia();
-
-                    this.$nextTick(() => lucide.createIcons());
-                    this.$watch('activeTab', () => setTimeout(() => lucide.createIcons(), 50));
-                    this.$watch('showModal', () => setTimeout(() => lucide.createIcons(), 50));
-                    this.$watch('showStreamModal', () => setTimeout(() => lucide.createIcons(), 50));
-                    this.$watch('showSearchMenu', () => setTimeout(() => lucide.createIcons(), 50));
-                },
-
-                setTab(tab) {
-                    this.activeTab = tab;
-                    this.searchQuery = '';
-                    this.predictedMatches = [];
-                    this.showSearchMenu = false;
-                    
-                    if (tab === 'movies') {
-                        this.mediaType = 'movie';
-                        this.fetchMedia();
-                    } else if (tab === 'tv') {
-                        this.mediaType = 'tv';
-                        this.fetchMedia();
-                    } else if (tab === 'home') {
-                        this.mediaType = 'movie';
-                        this.fetchMedia();
-                    }
-                    setTimeout(() => lucide.createIcons(), 50);
-                },
-
-                getImageUrl(path, size = 'w500') {
-                    if (!path) return 'https://placehold.co/500x750/141414/ffffff?text=CineVerse';
-                    return `${IMGB}${size}${path}`;
-                },
-
-                formatRuntime(minutes) {
-                    if (!minutes) return '45 mins';
-                    const hrs = Math.floor(minutes / 60);
-                    const mins = minutes % 60;
-                    if (hrs === 0) return `${mins} mins`;
-                    if (mins === 0) return `${hrs} hr${hrs > 1 ? 's' : ''}`;
-                    return `${hrs} hr${hrs > 1 ? 's' : ''} ${mins} mins`;
-                },
-
-                async fetchMedia() {
-                    this.isLoading = true;
-                    try {
-                        const url = `${TMGB}/discover/${this.mediaType}?api_key=${KEY}&sort_by=popularity.desc&vote_count.gte=50`;
-                        const res = await fetch(url);
-                        const data = await res.json();
-                        const results = data.results || [];
-                        
-                        const seenIds = new Set();
-                        this.mediaList = results
-                            .filter(item => {
-                                if (!item.poster_path || !item.backdrop_path) return false;
-                                if (seenIds.has(item.id)) return false;
-                                seenIds.add(item.id);
-                                return true;
-                            })
-                            .slice(0, 24)
-                            .map(item => ({
-                                ...item,
-                                media_type: this.mediaType
-                            }));
-                        
-                        if (this.mediaList.length > 0) {
-                            this.featuredItem = this.mediaList[0];
-                        } else {
-                            this.featuredItem = null;
-                        }
-                    } catch (e) {
-                        console.error("Error fetching media:", e);
-                    } finally {
-                        this.isLoading = false;
-                        setTimeout(() => lucide.createIcons(), 50);
-                    }
-                },
-
-                async handlePredictionInput() {
-                    const q = this.searchQuery.trim();
-                    if (q.length === 0) {
-                        this.predictedMatches = [];
-                        this.showSearchMenu = false;
-                        return;
-                    }
-
-                    this.showSearchMenu = true;
-                    try {
-                        const [movieRes, tvRes] = await Promise.all([
-                            fetch(`${TMGB}/search/movie?api_key=${KEY}&query=${encodeURIComponent(q)}`),
-                            fetch(`${TMGB}/search/tv?api_key=${KEY}&query=${encodeURIComponent(q)}`)
-                        ]);
-                        const movieData = await movieRes.json();
-                        const tvData = await tvRes.json();
-
-                        const movies = (movieData.results || []).filter(item => item.poster_path).slice(0, 3).map(i => ({...i, media_type: 'movie'}));
-                        const shows = (tvData.results || []).filter(item => item.poster_path).slice(0, 3).map(i => ({...i, media_type: 'tv'}));
-
-                        const combined = [...movies, ...shows];
-                        const uniqueMap = new Map();
-                        combined.forEach(i => uniqueMap.set(i.id, i));
-                        this.predictedMatches = Array.from(uniqueMap.values()).slice(0, 6);
-
-                        if (this.predictedMatches.length === 0) {
-                            this.showSearchMenu = false;
-                        }
-                    } catch (e) {
-                        console.error("Error in prediction search:", e);
-                        this.predictedMatches = [];
-                    }
-                    setTimeout(() => lucide.createIcons(), 50);
-                },
-
-                async executeFullSearch() {
-                    const q = this.searchQuery.trim();
-                    if (!q) return;
-                    this.showSearchMenu = false;
-                    this.isLoading = true;
-                    this.activeTab = 'full-search';
-
-                    try {
-                        const [movieRes, tvRes] = await Promise.all([
-                            fetch(`${TMGB}/search/movie?api_key=${KEY}&query=${encodeURIComponent(q)}`),
-                            fetch(`${TMGB}/search/tv?api_key=${KEY}&query=${encodeURIComponent(q)}`)
-                        ]);
-                        const movieData = await movieRes.json();
-                        const tvData = await tvRes.json();
-
-                        const movies = (movieData.results || []).filter(item => item.poster_path).map(i => ({...i, media_type: 'movie'}));
-                        const shows = (tvData.results || []).filter(item => item.poster_path).map(i => ({...i, media_type: 'tv'}));
-
-                        const combined = [...movies, ...shows];
-                        const uniqueMap = new Map();
-                        combined.forEach(i => uniqueMap.set(i.id, i));
-                        this.fullSearchResults = Array.from(uniqueMap.values());
-                    } catch (e) {
-                        console.error("Error in full search:", e);
-                        this.fullSearchResults = [];
-                    } finally {
-                        this.isLoading = false;
-                        setTimeout(() => lucide.createIcons(), 50);
-                    }
-                },
-
-                clearSearch() {
-                    this.searchQuery = '';
-                    this.predictedMatches = [];
-                    this.showSearchMenu = false;
-                },
-
-                resetHome() {
-                    this.setTab('home');
-                },
-
-                async openDetailsModal(item) {
-                    const type = item.media_type ? item.media_type : (this.mediaType === 'tv' || item.first_air_date ? 'tv' : 'movie');
-                    try {
-                        const res = await fetch(`${TMGB}/${type}/${item.id}?api_key=${KEY}`);
-                        const data = await res.json();
-                        this.currentMedia = { ...data, media_type: type };
-                        
-                        this.selectedSeason = 1;
-                        this.selectedEpisode = 1;
-                        this.showSeasonDropdown = false;
-                        this.showEpisodeDropdown = false;
-
-                        if (type === 'tv' && data.seasons) {
-                            this.seasonList = data.seasons.filter(s => s.season_number >= 0);
-                            if (this.seasonList.length > 0) {
-                                this.selectedSeason = this.seasonList[0].season_number;
-                                await this.fetchEpisodesForSeason(item.id, this.selectedSeason);
-                            }
-                        }
-
-                        this.showModal = true;
-                        document.body.style.overflow = 'hidden';
-                        setTimeout(() => lucide.createIcons(), 50);
-                    } catch (e) {
-                        console.error("Error fetching media details:", e);
-                    }
-                },
-
-                async fetchEpisodesForSeason(tvId, seasonNum) {
-                    try {
-                        const res = await fetch(`${TMGB}/tv/${tvId}/season/${seasonNum}?api_key=${KEY}`);
-                        const data = await res.json();
-                        const count = data.episodes ? data.episodes.length : 10;
-                        this.episodesCountList = Array.from({length: count}, (_, i) => i + 1);
-                        this.selectedEpisode = 1;
-                    } catch (e) {
-                        this.episodesCountList = Array.from({length: 10}, (_, i) => i + 1);
-                    }
-                },
-
-                async selectSeason(seasonNum) {
-                    this.selectedSeason = seasonNum;
-                    this.showSeasonDropdown = false;
-                    if (this.currentMedia) {
-                        await this.fetchEpisodesForSeason(this.currentMedia.id, seasonNum);
-                    }
-                },
-
-                closeDetailsModal() {
-                    this.showModal = false;
-                    document.body.style.overflow = 'auto';
-                },
-
-                launchStream(item) {
-                    const type = item.media_type;
-                    if (type === 'movie') {
-                        this.streamUrl = `https://streamrip.fun/play?type=movie&id=${item.id}`;
-                    } else {
-                        this.streamUrl = `https://streamrip.fun/play?type=tv&id=${item.id}&s=${this.selectedSeason}&ep=${this.selectedEpisode}`;
-                    }
-                    this.showModal = false;
-                    this.showStreamModal = true;
-                    setTimeout(() => lucide.createIcons(), 50);
-                },
-
-                closeStreamModal() {
-                    this.showStreamModal = false;
-                    this.streamUrl = '';
-                    document.body.style.overflow = 'auto';
-                },
-
-                toggleWatchlist(item) {
-                    const index = this.watchlist.findIndex(m => m.id === item.id);
-                    const title = item.title || item.name;
-                    if (index > -1) {
-                        this.watchlist.splice(index, 1);
-                        this.showToast(`Removed "${title}" from Watchlist`);
-                    } else {
-                        this.watchlist.push(item);
-                        this.showToast(`Added "${title}" to Watchlist`);
-                    }
-                    localStorage.setItem('cineverse_watchlist_v5', JSON.stringify(this.watchlist));
-                    setTimeout(() => lucide.createIcons(), 50);
-                },
-
-                isInWatchlist(itemId) {
-                    return this.watchlist.some(m => m.id === itemId);
-                },
-
-                showToast(message) {
-                    this.toastMessage = message;
-                    setTimeout(() => {
-                        if (this.toastMessage === message) this.toastMessage = '';
-                    }, 3500);
-                }
-            }
+      elements.btnLoadMore.addEventListener('click', () => {
+        if (!state.isLoading && state.hasMorePages) {
+          state.page++;
+          renderSkeletons(false);
+          fetchVaultData(false);
         }
-    </script>
+      });
+
+      elements.btnClosePlayer.addEventListener('click', closePlayerModal);
+      
+      elements.playerServerSelect.addEventListener('change', () => updatePlayerFrame());
+
+      elements.playerSeasonSelect.addEventListener('change', async (e) => {
+        state.selectedSeason = parseInt(e.target.value);
+        await updateEpisodesForSeason(state.activeItem.id, state.selectedSeason);
+        updatePlayerFrame();
+      });
+
+      elements.playerEpisodeSelect.addEventListener('change', () => {
+        updatePlayerFrame();
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { closePlayerModal(); }
+      });
+    }
+
+    function resetSearchField() {
+      elements.searchInput.value = '';
+      elements.btnClearSearch.classList.add('hidden');
+      state.query = '';
+      fetchVaultData(true);
+    }
+
+    function switchVaultMode(newMode) {
+      if (state.mode === newMode) return;
+      state.mode = newMode;
+      if (newMode === 'MOVIE') {
+        elements.btnMovieMode.className = "px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-black shadow";
+        elements.btnTvMode.className = "px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 text-neutral-400 hover:text-white";
+      } else {
+        elements.btnTvMode.className = "px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-black shadow";
+        elements.btnMovieMode.className = "px-3 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 text-neutral-400 hover:text-white";
+      }
+      fetchVaultData(true);
+    }
+
+    function renderSkeletons(reset = true) {
+      const skeletons = Array(20).fill(0).map(() => `<div class="poster-card rounded skeleton-shimmer border border-white/5 relative overflow-hidden"></div>`).join('');
+      if (reset) elements.posterGrid.innerHTML = skeletons;
+      else elements.posterGrid.insertAdjacentHTML('beforeend', skeletons);
+    }
+
+    async function fetchVaultData(reset = true) {
+      if (state.isLoading) return;
+      state.isLoading = true;
+      if (reset) { state.page = 1; state.items = []; renderSkeletons(true); }
+
+      let url = "";
+      if (state.query) {
+        const endpoint = state.mode === 'MOVIE' ? 'movie' : 'tv';
+        url = `https://api.themoviedb.org/3/search/${endpoint}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(state.query)}&page=${state.page}`;
+      } else {
+        const endpoint = state.mode === 'MOVIE' ? 'movie/popular' : 'tv/popular';
+        url = `https://api.themoviedb.org/3/${endpoint}?api_key=${TMDB_API_KEY}&page=${state.page}`;
+      }
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        const results = data.results || [];
+
+        state.hasMorePages = state.page < (data.total_pages || 1);
+        state.items = reset ? results : [...state.items, ...results];
+        renderPosterGrid();
+        elements.btnLoadMore.classList.toggle('hidden', !state.hasMorePages);
+      } catch (err) {
+        if (reset) elements.posterGrid.innerHTML = '';
+        elements.emptyState.classList.remove('hidden');
+        elements.btnLoadMore.classList.add('hidden');
+      } finally {
+        state.isLoading = false;
+      }
+    }
+
+    function renderPosterGrid() {
+      if (!state.items || state.items.length === 0) {
+        elements.posterGrid.innerHTML = '';
+        elements.emptyState.classList.remove('hidden');
+        elements.btnLoadMore.classList.add('hidden');
+        return;
+      }
+      elements.emptyState.classList.add('hidden');
+      elements.posterGrid.innerHTML = state.items.map((item, index) => {
+        const title = item.title || item.name || 'Untitled';
+        const posterPath = item.poster_path ? `${TMDB_IMG_BASE}${item.poster_path}` : 'https://placehold.co/400x600/000000/ffffff?text=No+Cover';
+        return `
+          <div data-index="${index}" class="poster-card group relative bg-black/20 backdrop-blur-sm rounded overflow-hidden border border-white/10 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:z-20 hover:border-white/40 shadow-lg">
+            <img src="${posterPath}" alt="${escapeHtml(title)}" loading="lazy" class="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-90 pointer-events-none">
+          </div>
+        `;
+      }).join('');
+
+      elements.posterGrid.querySelectorAll('.poster-card').forEach(card => {
+        card.addEventListener('click', async () => {
+          const idx = parseInt(card.getAttribute('data-index'));
+          const item = state.items[idx];
+          if (item) {
+            await openPlayerModal(item);
+          }
+        });
+      });
+    }
+
+    async function openPlayerModal(item) {
+      state.activeItem = item;
+      const title = item.title || item.name || 'Untitled';
+      elements.playerTitle.textContent = title;
+
+      if (state.mode === 'MOVIE') {
+        elements.tvControls.classList.add('hidden');
+      } else {
+        elements.tvControls.classList.remove('hidden');
+        try {
+          const res = await fetch(`https://api.themoviedb.org/3/tv/${item.id}?api_key=${TMDB_API_KEY}`);
+          const tvData = await res.json();
+          const seasons = tvData.seasons || [{ season_number: 1, episode_count: 12 }];
+
+          elements.playerSeasonSelect.innerHTML = seasons
+            .filter(s => s.season_number > 0)
+            .map(s => `<option value="${s.season_number}">Season ${s.season_number}</option>`).join('');
+
+          state.selectedSeason = 1;
+          await updateEpisodesForSeason(item.id, 1);
+        } catch (e) {
+          elements.playerSeasonSelect.innerHTML = `<option value="1">Season 1</option>`;
+          elements.playerEpisodeSelect.innerHTML = `<option value="1">Ep 1</option>`;
+        }
+      }
+
+      updatePlayerFrame();
+      elements.playerModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    async function updateEpisodesForSeason(tvId, seasonNum) {
+      try {
+        const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNum}?api_key=${TMDB_API_KEY}`);
+        const seasonData = await res.json();
+        const epCount = seasonData.episodes ? seasonData.episodes.length : 12;
+
+        let optionsHtml = '';
+        for (let i = 1; i <= epCount; i++) {
+          optionsHtml += `<option value="${i}">Ep ${i}</option>`;
+        }
+        elements.playerEpisodeSelect.innerHTML = optionsHtml;
+      } catch (e) {
+        elements.playerEpisodeSelect.innerHTML = `<option value="1">Ep 1</option>`;
+      }
+    }
+
+    function updatePlayerFrame() {
+      const item = state.activeItem;
+      const server = elements.playerServerSelect.value;
+      const id = item.id;
+      const season = state.selectedSeason || 1;
+      const episode = elements.playerEpisodeSelect.value || 1;
+
+      let url = "";
+
+      if (state.mode === 'MOVIE') {
+        switch(server) {
+          case 'vidcore':
+            url = `https://vidcore.net/movie/${id}?autoPlay=true`;
+            break;
+          case 'viduki':
+            url = `https://viduki.net/1/movie/${id}?color=ffffff`;
+            break;
+          case 'streamrip':
+            url = `https://streamrip.fun/play?type=movie&id=${id}`;
+            break;
+          case 'vidfast':
+            url = `https://vidfast.pro/movie/${id}`;
+            break;
+          case 'vidfast_vc':
+            url = `https://vidfast.vc/movie/${id}?autoPlay=true`;
+            break;
+          case 'vidlink':
+            url = `https://vidlink.pro/movie/${id}`;
+            break;
+          case 'vidsrc':
+            url = `https://vidsrc.to/embed/movie/${id}`;
+            break;
+          default:
+            url = `https://vidsrc.to/embed/movie/${id}`;
+        }
+      } else {
+        switch(server) {
+          case 'vidcore':
+            url = `https://vidcore.net/tv/${id}/${season}/${episode}?autoPlay=true`;
+            break;
+          case 'viduki':
+            url = `https://viduki.net/1/tv/${id}/${season}/${episode}?color=ffffff`;
+            break;
+          case 'streamrip':
+            url = `https://streamrip.fun/play?type=tv&id=${id}&s=${season}&ep=${episode}`;
+            break;
+          case 'vidfast':
+            url = `https://vidfast.pro/tv/${id}/${season}/${episode}`;
+            break;
+          case 'vidfast_vc':
+            url = `https://vidfast.vc/tv/${id}/${season}/${episode}?autoPlay=true`;
+            break;
+          case 'vidlink':
+            url = `https://vidlink.pro/tv/${id}/${season}/${episode}`;
+            break;
+          case 'vidsrc':
+            url = `https://vidsrc.to/embed/tv/${id}/${season}/${episode}`;
+            break;
+          default:
+            url = `https://vidsrc.to/embed/tv/${id}/${season}/${episode}`;
+        }
+      }
+
+      elements.mediaPlayerIframe.src = url;
+    }
+
+    function closePlayerModal() {
+      elements.playerModal.classList.add('hidden');
+      document.body.style.overflow = '';
+      elements.mediaPlayerIframe.src = '';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
