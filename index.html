@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title> frutimovies </title>
+  <title>CineVault - Custom Font</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,11 +11,6 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
-  <!-- Inter Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -28,7 +23,7 @@
             vaultBorder: 'rgba(255, 255, 255, 0.1)',
           },
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
+            sans: ['GNFRegular', 'sans-serif'],
           }
         }
       }
@@ -36,7 +31,15 @@
   </script>
 
   <style>
-    /* Absolute No Background - Fully Transparent Base */
+    /* Custom Font Registration */
+    @font-face {
+      font-family: 'GNFRegular';
+      src: url('gnf.regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    /* Absolute No Background - Fully Transparent Base & Custom Font Application */
     html, body {
       background-color: transparent !important;
       background: transparent !important;
@@ -45,6 +48,12 @@
       width: 100%;
       min-height: 100vh;
       color: #ffffff;
+      font-family: 'GNFRegular', sans-serif !important;
+    }
+
+    /* Apply custom font explicitly to inputs and buttons */
+    input, button, select, textarea {
+      font-family: 'GNFRegular', sans-serif !important;
     }
 
     /* Monochrome Scrollbar */
